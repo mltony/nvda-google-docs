@@ -56,38 +56,43 @@ def executeAsynchronously(gen):
 
 
 def getUrl(obj):
-    #mylog("getUrl start")
+    mylog("getUrl start")
     if not isinstance(obj, IAccessible):
-        #mylog("Not IA2")
+        mylog("Not IA2")
         return None
     url = None
     o = obj
     while o is not None:
-        #mylog(f"while loop o:{o.role}")
+        mylog(f"while loop o:{o.role}")
         try:
             tag = o.IA2Attributes["tag"]
-            #mylog(f"tag={tag}")
+            mylog(f"tag={tag}")
         except AttributeError:
-            #mylog("AttributeError")
+            mylog("AttributeError")
             break
         except KeyError:
-            #mylog("KeyError - try to continue")
+            mylog("KeyError - try to continue")
             o = o.simpleParent
             continue
-        try:
-            url = o.IAccessibleObject.accValue(o.IAccessibleChildID)
-            #firstLine = url.splitlines()[0]
-            #mylog(f"url = {firstLine}")
-        except:
-            pass
-        if tag == "#document":
-        #if tag == "body":
-            #mylog("Good tag!")
-            url = o.IAccessibleObject.accValue(o.IAccessibleChildID)
-            #mylog(f"url={url}")
-        #mylog("go to simpleParent")
+        if False:
+            try:
+                tmpUrl = o.IAccessibleObject.accValue(o.IAccessibleChildID)
+                mylog(f"url = {tmpUrl.splitlines()[0]}")
+            except:
+                pass
+        #if tag == "#document":
+        if tag in [
+            "#document", # for Chrome
+            "body", # For Firefox
+        ]:
+            mylog("Good tag!")
+            thisUrl = o.IAccessibleObject.accValue(o.IAccessibleChildID)
+            mylog(f"url={thisUrl}")
+            if thisUrl is not None and thisUrl.startswith("http"):
+                url = thisUrl
+        mylog("go to simpleParent")
         o = o.simpleParent
-    #mylog(f"Done; url={url}")
+    mylog(f"Done; url={url}")
     return url
 
 urlCache = weakref.WeakKeyDictionary()
@@ -163,27 +168,27 @@ def getFocusedObjectFromMainThread():
         result = my_future.get()
     return result
 def isGoogleDocs():
-    #mylog("isGD")
+    mylog("isGD")
     focus = api.getFocusObject()
     # For some reason this call returns an object with Role.UNKNOWN
     # But we can extract treeInterceptor from it and that object makes more sense.
     # Below we will also retrieve focused object from main thread to perform additional checks.
     obj = focus.treeInterceptor.currentNVDAObject
     api.o = obj
-    #mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
+    mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
     try:
         interceptor = focus.treeInterceptor
     except AttributeError:
-        #mylog("Interceptor not found")
+        mylog("Interceptor not found")
         return False
 
     url = getUrlCached(interceptor, obj)
-    #mylog(f"url = {url}")
+    mylog(f"url = {url}")
     if url is None:
-        #mylog("url is none")
+        mylog("url is none")
         return False
     if not url.startswith("https://docs.google.com/document/d/"):
-        #mylog("Url doesn't match")
+        mylog("Url doesn't match")
         return False
     if True:
         # For some reason I couldn't figure out if we query focused object in this thread
@@ -192,12 +197,12 @@ def isGoogleDocs():
         # Happy hacking!
         focus, role, name = getFocusedObjectFromMainThread()
         if role not in [Role.EDITABLETEXT]:
-            #mylog(f"focus role doesn't match: found {role}")
+            mylog(f"focus role doesn't match: found {role}")
             return False
         if name != 'Document content':
-            #mylog("focus object name doesn't match")
+            mylog("focus object name doesn't match")
             return False
-    #mylog("yay!")
+    mylog("yay!")
     return True
 
 
