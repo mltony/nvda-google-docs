@@ -1,0 +1,130 @@
+#A part of the GoogleDocs addon for NVDA
+#Copyright (C) 2024 Tony Malykh
+#This file is covered by the GNU General Public License.
+#See the file LICENSE  for more details.
+
+import addonHandler
+import api
+import browseMode
+import core
+import globalPluginHandler
+from NVDAObjects.IAccessible import IAccessible
+import textInfos
+import tones
+from scriptHandler import script
+import ui
+import weakref
+
+debug = True
+if debug:
+    f = open("C:\\Users\\tmal\\drp\\1.txt", "w", encoding='utf-8')
+def mylog(s):
+    if debug:
+        print(str(s), file=f)
+        f.flush()
+
+
+def getUrl(obj):
+    mylog("getUrl start")
+    if not isinstance(obj, IAccessible):
+        mylog("Not IA2")
+        return None
+    url = None
+    o = obj
+    while o is not None:
+        try:
+            tag = o.IA2Attributes["tag"]
+            mylog(f"tag={tag}")
+        except AttributeError:
+            mylog("AttributeError")
+            break
+        except KeyError:
+            mylog("KeyError - try to continue")
+            o = o.simpleParent
+            continue
+        if tag == "#document":
+            mylog("Good tag!")
+            url = o.IAccessibleObject.accValue(o.IAccessibleChildID)
+            mylog(f"url={url}")
+        mylog("go to simpleParent")
+        o = o.simpleParent
+    mylog(f"Done; url={url}")
+    return url
+
+urlCache = weakref.WeakKeyDictionary()
+def getUrlCached(obj):
+    mylog("getUrlCached({obj})")
+    try:
+        interceptor = obj.treeInterceptor
+    except AttributeError:
+        mylog("Interceptor not found")
+        return None
+    if interceptor is None:
+        mylog("Interceptor is None")
+        return None
+    try:
+        result = urlCache[interceptor]
+        mylog(f"Cache hit! Cached result = {result}")
+        if result is not None:
+            return result
+    except KeyError:
+        mylog("Cache miss")
+        pass
+    url = getUrl(obj)
+    mylog(f"Resolved url = {url}")
+    if url is not None and url.startswith("http"):
+        mylog(f"Storing in cache url = {url}")
+        urlCache[interceptor] = url
+    mylog(f"Returning url={url}")
+    return url
+
+def isGoogleDocs(obj):
+    mylog(f"isGoogleDocs({obj})")
+    url = getUrlCached(obj)
+    return url is not None and url.startswith("https://docs.google.com/document/d/")
+
+originalGetAlternativeScript = None
+def myGetAlternativeScript(selfself,gesture,script):
+    result = originalGetAlternativeScript(selfself,gesture,script)
+    if not selfself.passThrough:
+        mylog("myGetAlternativeScript")
+        #obj = selfself.currentNVDAObject # this returns None for some reason
+        obj = selfself.makeTextInfo(textInfos.POSITION_CARET).NVDAObjectAtStart
+        info = selfself.makeTextInfo(textInfos.POSITION_CARET)
+        info.expand('paragraph')
+        ss = info.NVDAObjectAtStart.role.name
+        def f():
+            #ui.message(str(obj.role))
+            #ui.message(info.text)
+            ui.message(ss)
+            ui.message(str(len(ss)))
+        core.callLater(500, f)
+        api.o = obj
+        api.s = selfself
+        mylog(f"obj = {obj}")
+        if obj is not None and isGoogleDocs(obj):
+            tones.beep(500, 50)
+            api.b = selfself
+            api.g = gesture
+    return result
+class GlobalPlugin(globalPluginHandler.GlobalPlugin):
+    def __init__(self, *args, **kwargs):
+        super(GlobalPlugin, self).__init__(*args, **kwargs)
+        self.injectHooks()
+
+    def terminate(self):
+        self.restoreHooks()
+
+    def injectHooks(self):
+        global originalGetAlternativeScript
+        originalGetAlternativeScript = browseMode.BrowseModeDocumentTreeInterceptor.getAlternativeScript
+        browseMode.BrowseModeDocumentTreeInterceptor.getAlternativeScript = myGetAlternativeScript
+
+    def restoreHooks(self):
+        browseMode.BrowseModeDocumentTreeInterceptor.getAlternativeScript = originalGetAlternativeScript
+
+    @script(description="Speaks URL", gestures=['kb:NVDA+Home'])
+    def script_speakUrl(self, gesture):
+        obj = api.getFocusObject()
+        url = getUrlCached(obj)
+        ui.message(str(url))

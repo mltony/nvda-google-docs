@@ -7,7 +7,6 @@ import addonHandler
 import api
 import browseMode
 import core
-from controlTypes import Role
 import documentBase
 import globalPluginHandler
 import keyboardHandler
@@ -15,18 +14,15 @@ from NVDAObjects.IAccessible import IAccessible
 from scriptHandler import script
 import speech
 import textInfos
-import threading
-from threading import Lock, Condition
 import time
 import tones
 import types
 import ui
 import weakref
 import winUser
-import wx
 
 
-debug = False
+debug = True
 if debug:
     f = open("C:\\Users\\tmal\\drp\\1.txt", "w", encoding='utf-8')
 def mylog(s):
@@ -63,7 +59,6 @@ def getUrl(obj):
     url = None
     o = obj
     while o is not None:
-        #mylog(f"while loop o:{o.role}")
         try:
             tag = o.IA2Attributes["tag"]
             #mylog(f"tag={tag}")
@@ -74,14 +69,7 @@ def getUrl(obj):
             #mylog("KeyError - try to continue")
             o = o.simpleParent
             continue
-        try:
-            url = o.IAccessibleObject.accValue(o.IAccessibleChildID)
-            #firstLine = url.splitlines()[0]
-            #mylog(f"url = {firstLine}")
-        except:
-            pass
         if tag == "#document":
-        #if tag == "body":
             #mylog("Good tag!")
             url = o.IAccessibleObject.accValue(o.IAccessibleChildID)
             #mylog(f"url={url}")
@@ -109,97 +97,10 @@ def getUrlCached(interceptor, obj):
     #mylog(f"Returning url={url}")
     return url
 
-class Future:
-    def __init__(self):
-        self.__condition = Condition(Lock())
-        self.__val = None
-        self.__exc = None
-        self.__is_set = False
-
-    def get(self):
-        with self.__condition:
-            while not self.__is_set:
-                self.__condition.wait()
-            if self.__exc is not None:
-                raise self.__exc
-            return self.__val
-
-    def set(self, val):
-        with self.__condition:
-            if self.__is_set:
-                raise RuntimeError("Future has already been set")
-            self.__val = val
-            self.__is_set = True
-            self.__condition.notify_all()
-
-    def setException(self, val):
-        with self.__condition:
-            if self.__is_set:
-                raise RuntimeError("Future has already been set")
-            self.__exc = val
-            self.__is_set = True
-            self.__condition.notify_all()
-            
-    def isSet(self):
-        return self.__is_set
-
-    def done(self):
-        return self.__is_set
-
-
-def isMainNVDAThread():
-    return threading.get_ident() == core.mainThreadId
-def getFocusedObjectFromMainThread():
-    def retrieveObjectProperties():
-        focus = api.getFocusObject()
-        return (focus, focus.role, focus.name)
-    if isMainNVDAThread():
-        result = retrieveObjectProperties()
-    else:
-        my_future = Future()
-        def retrieveAndSetFuture():
-            my_future.set(retrieveObjectProperties())
-        wx.CallAfter(retrieveAndSetFuture)
-        result = my_future.get()
-    return result
-def isGoogleDocs():
-    #mylog("isGD")
-    focus = api.getFocusObject()
-    # For some reason this call returns an object with Role.UNKNOWN
-    # But we can extract treeInterceptor from it and that object makes more sense.
-    # Below we will also retrieve focused object from main thread to perform additional checks.
-    obj = focus.treeInterceptor.currentNVDAObject
-    api.o = obj
-    #mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
-    try:
-        interceptor = focus.treeInterceptor
-    except AttributeError:
-        #mylog("Interceptor not found")
-        return False
-
+def isGoogleDocs(interceptor, obj):
+    #mylog(f"isGoogleDocs({obj})")
     url = getUrlCached(interceptor, obj)
-    #mylog(f"url = {url}")
-    if url is None:
-        #mylog("url is none")
-        return False
-    if not url.startswith("https://docs.google.com/document/d/"):
-        #mylog("Url doesn't match")
-        return False
-    if True:
-        # For some reason I couldn't figure out if we query focused object in this thread
-        # It returns Role.UNKNOWN.
-        # So we need to compute role and name in the main thread.
-        # Happy hacking!
-        focus, role, name = getFocusedObjectFromMainThread()
-        if role not in [Role.EDITABLETEXT]:
-            #mylog(f"focus role doesn't match: found {role}")
-            return False
-        if name != 'Document content':
-            #mylog("focus object name doesn't match")
-            return False
-    #mylog("yay!")
-    return True
-
+    return url is not None and url.startswith("https://docs.google.com/document/d/")
 
 def getVkLetter(keyName):
     en_us_input_Hkl = 1033 + (1033 << 16)
@@ -294,7 +195,7 @@ if True:
     qq('l', CA, 'l')
     qq('i', CA, 'i')
     qq('g', CA, 'g')
-
+    
     qq('t', CAS, 't')
 
 PT = addPassThroughScript
@@ -326,26 +227,26 @@ def findOverrideScript(gesture):
 
 originalGetAlternativeScript = None
 originalTableMovementScriptHelper = None
-addonEnabled = True
 keystrokeCounter = 0
 def myGetAlternativeScript(selfself,gesture,script):
     global keystrokeCounter
     keystrokeCounter += 1
     result = originalGetAlternativeScript(selfself,gesture,script)
     if not selfself.passThrough:
-        if addonEnabled and isGoogleDocs():
+        obj = selfself.currentNVDAObject
+        if obj is not None and isGoogleDocs(selfself, obj):
             overrideScript = findOverrideScript(gesture)
             if overrideScript is not None:
+                #tones.beep(500, 50)
                 return overrideScript
-        else:
-            pass
     return result
 
 def myTableMovementScriptHelper(selfself, movement, axis):
     if isinstance(selfself, browseMode.BrowseModeDocumentTreeInterceptor):
-        if addonEnabled and isGoogleDocs():
+        if isGoogleDocs(selfself, selfself.currentNVDAObject):
             # Here instead of executing table navigation gesture on treeInterceptor, we execute the same gesture on focused object instead.
             selfself = api.getFocusObject()
+            #tones.beep(500, 50)
     originalTableMovementScriptHelper(selfself, movement, axis)
 
 class GlobalPlugin(globalPluginHandler.GlobalPlugin):
@@ -367,20 +268,8 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         browseMode.BrowseModeDocumentTreeInterceptor.getAlternativeScript = originalGetAlternativeScript
         documentBase.DocumentWithTableNavigation._tableMovementScriptHelper = originalTableMovementScriptHelper
 
-    @script(description="Toggle Google Docs accessibility mode.", gestures=['kb:NVDA+alt+g'])
-    def script_toggleGoogleDocAccessibility (self, gesture):
-        global addonEnabled
-        addonEnabled = not addonEnabled
-        if addonEnabled:
-            msg = _("Enabled Google Docs accessibility layer")
-        else:
-            msg = _("Disabled Google Docs accessibility layer")
-        ui.message(msg)
-
-
-    #@script(description="Speaks URL", gestures=['kb:NVDA+Home'])
+    @script(description="Speaks URL", gestures=['kb:NVDA+Home'])
     def script_speakUrl(self, gesture):
-        #mylog("asdfasdf")
         obj = api.getFocusObject()
-        url = getUrlCached(obj.treeInterceptor, obj)
+        url = getUrlCached(obj)
         ui.message(str(url))
