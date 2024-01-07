@@ -292,11 +292,13 @@ def addPassThroughScript(keystroke, unit=None):
 
 qq = addQuickNavOverride
 if True:
+    # Google docs screenreader commands for reference:
+    # https://support.google.com/docs/answer/179738?sjid=11768555839712713642-NC#zippy=%2Cpc-shortcuts
     qq('h', CA, 'h')
     for i in range(1, 7):
         qq(str(i), CA, str(i))
     qq('k', CA, 'l')
-    qq('l', CA, 'l')
+    qq('l', CA, 'o')
     qq('i', CA, 'i')
     qq('g', CA, 'g')
 
