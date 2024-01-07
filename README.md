@@ -47,4 +47,5 @@ Navigation commands:
 
 * This add-on requires `en_us` to be installed on the computer.
 * This add-on converts NVDA commands into Google Docs gestures. Therefore their behavior cannot be adjusted.
-* For example, pressing `H` repeatedly would wrap to the beginning of the document. This is inconvenient for NVDA users, but this is the default in Google Docs and unfortunately cannot be changed.
+    * For example, pressing `H` repeatedly would wrap to the beginning of the document. This is inconvenient for NVDA users, but this is the default in Google Docs and unfortunately cannot be changed.
+* Selection commands, such as `Shift+Arrows` are not supported at this time. Please switch to forms mode for selection.
