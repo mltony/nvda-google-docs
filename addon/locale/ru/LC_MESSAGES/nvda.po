@@ -1,0 +1,25 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: GoogleDocs\n"
+"POT-Creation-Date: 2024-01-08 01:02+0700\n"
+"PO-Revision-Date: 2024-01-08 17:31+0300\n"
+"Last-Translator: Danil Kostenkov <danilkostenkov38@gmail.com>\n"
+"Language-Team: Danil Kostenkov <danilkostenkov38@gmail.com>\n"
+"Language: ru_RU\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=3; plural=(n%10==1 && n%100!=11 ? 0 : n%10>=2 && "
+"n%10<=4 && (n%100<12 || n%100>14) ? 1 : 2);\n"
+"X-Generator: Poedit 3.4.2\n"
+"X-Poedit-Basepath: ../../../globalPlugins\n"
+"X-Poedit-SourceCharset: UTF-8\n"
+"X-Poedit-SearchPath-0: .\n"
+
+#: googleDocs.py:380
+msgid "Enabled Google Docs accessibility layer"
+msgstr "Уровень доступности Google Документов включён"
+
+#: googleDocs.py:382
+msgid "Disabled Google Docs accessibility layer"
+msgstr "Уровень доступности Google Документов выключен"
