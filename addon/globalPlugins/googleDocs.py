@@ -168,42 +168,45 @@ def getFocusedObjectFromMainThread():
         result = my_future.get()
     return result
 def isGoogleDocs():
-    mylog("isGD")
-    focus = api.getFocusObject()
-    # For some reason this call returns an object with Role.UNKNOWN
-    # But we can extract treeInterceptor from it and that object makes more sense.
-    # Below we will also retrieve focused object from main thread to perform additional checks.
-    obj = focus.treeInterceptor.currentNVDAObject
-    api.o = obj
-    mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
     try:
-        interceptor = focus.treeInterceptor
-    except AttributeError:
-        mylog("Interceptor not found")
-        return False
+        mylog("isGD")
+        focus = api.getFocusObject()
+        # For some reason this call returns an object with Role.UNKNOWN
+        # But we can extract treeInterceptor from it and that object makes more sense.
+        # Below we will also retrieve focused object from main thread to perform additional checks.
+        obj = focus.treeInterceptor.currentNVDAObject
+        api.o = obj
+        mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
+        try:
+            interceptor = focus.treeInterceptor
+        except AttributeError:
+            mylog("Interceptor not found")
+            return False
 
-    url = getUrlCached(interceptor, obj)
-    mylog(f"url = {url}")
-    if url is None:
-        mylog("url is none")
-        return False
-    if not url.startswith("https://docs.google.com/document/d/"):
-        mylog("Url doesn't match")
-        return False
-    if True:
-        # For some reason I couldn't figure out if we query focused object in this thread
-        # It returns Role.UNKNOWN.
-        # So we need to compute role and name in the main thread.
-        # Happy hacking!
-        focus, role, name = getFocusedObjectFromMainThread()
-        if role not in [Role.EDITABLETEXT]:
-            mylog(f"focus role doesn't match: found {role}")
+        url = getUrlCached(interceptor, obj)
+        mylog(f"url = {url}")
+        if url is None:
+            mylog("url is none")
             return False
-        if name != 'Document content':
-            mylog("focus object name doesn't match")
+        if not url.startswith("https://docs.google.com/document/d/"):
+            mylog("Url doesn't match")
             return False
-    mylog("yay!")
-    return True
+        if True:
+            # For some reason I couldn't figure out if we query focused object in this thread
+            # It returns Role.UNKNOWN.
+            # So we need to compute role and name in the main thread.
+            # Happy hacking!
+            focus, role, name = getFocusedObjectFromMainThread()
+            if role not in [Role.EDITABLETEXT]:
+                mylog(f"focus role doesn't match: found {role}")
+                return False
+            if name != 'Document content':
+                mylog("focus object name doesn't match")
+                return False
+        mylog("yay!")
+        return True
+    except:
+        return False
 
 
 def getVkLetter(keyName):
