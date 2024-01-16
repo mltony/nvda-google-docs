@@ -7,7 +7,7 @@ import addonHandler
 import api
 import browseMode
 import core
-from controlTypes import Role
+from controlTypes import Role, OutputReason
 import documentBase
 import globalPluginHandler
 import keyboardHandler
@@ -278,7 +278,7 @@ def deferredSpeakUnit(obj, unit, keystrokeCounterValue):
         if text is None or newText != text:
             if text is not None:
                 speech.cancelSpeech()
-            speech.speakTextInfo(info)
+            speech.speakTextInfo(info, unit=unit, reason=OutputReason.CARET)
             if text is not None:
                 return
             else:
