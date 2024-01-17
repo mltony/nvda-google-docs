@@ -157,7 +157,16 @@ def isMainNVDAThread():
 def getFocusedObjectFromMainThread():
     def retrieveObjectProperties():
         focus = api.getFocusObject()
-        return (focus, focus.role, focus.name)
+        if True:
+            mylog(f"retrieveObjectProperties: {focus.role == Role.EDITABLETEXT} {focus.simplePrevious is None} {focus.simpleNext is None} {focus.parent is not None} {focus.parent.role == Role.DOCUMENT}")
+        isGD = (
+            focus.role == Role.EDITABLETEXT
+            and focus.simplePrevious is None
+            and focus.simpleNext is None
+            and focus.parent is not None
+            and focus.parent.role == Role.DOCUMENT
+        )
+        return (focus, focus.role, focus.name, isGD)
     if isMainNVDAThread():
         result = retrieveObjectProperties()
     else:
@@ -196,12 +205,12 @@ def isGoogleDocs():
             # It returns Role.UNKNOWN.
             # So we need to compute role and name in the main thread.
             # Happy hacking!
-            focus, role, name = getFocusedObjectFromMainThread()
+            focus, role, name, isGD = getFocusedObjectFromMainThread()
             if role not in [Role.EDITABLETEXT]:
                 mylog(f"focus role doesn't match: found {role}")
                 return False
-            if name != 'Document content':
-                mylog("focus object name doesn't match")
+            if not isGD:
+                mylog(f"isGD == False")
                 return False
         mylog("yay!")
         return True
