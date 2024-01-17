@@ -5,6 +5,7 @@ This add-on enhances compatibility with Google Docs. This add-on works in browse
 ## Setup
 
 For this add-on to work properly, we need to enable screenreader mode and Braille mode. In order to do that:
+* Make sure that your default NVDA shortcut is either unassigned or assigned to something else rather than `Control+Alt+N`. In order to do that, edit properties of your NVDA shortcut on the desktop. This requirement comes from Google Docs.
 * Open any Google Doc.
 * Press `Control+Alt+Z` until you hear "Screenreader support enabled".
 * Press `Control+Alt+H` until you hear  "Braille support enabled".
