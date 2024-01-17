@@ -197,7 +197,7 @@ def isGoogleDocs():
         if url is None:
             mylog("url is none")
             return False
-        if not url.startswith("https://docs.google.com/document/d/"):
+        if not url.startswith("https://docs.google.com/document/"):
             mylog("Url doesn't match")
             return False
         if True:
