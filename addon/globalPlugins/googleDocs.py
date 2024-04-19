@@ -309,10 +309,11 @@ if True:
     qq('h', CA, 'h')
     for i in range(1, 7):
         qq(str(i), CA, str(i))
-    qq('k', CA, 'l')
+    qq('k', CA, 'l')  # Jump to next hyperlink: CA+N CA+L
     qq('l', CA, 'o')
     qq('i', CA, 'i')
     qq('g', CA, 'g')
+    qq('c', CA, 'c')  # Next comment CA+N CA+C
 
     qq('t', CAS, 't')
 
