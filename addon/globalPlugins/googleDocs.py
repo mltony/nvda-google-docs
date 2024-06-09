@@ -96,13 +96,6 @@ def getUrl2(obj):
             mylog("KeyError - try to continue")
             o = o.simpleParent
             continue
-        if False:
-            try:
-                tmpUrl = o.IAccessibleObject.accValue(o.IAccessibleChildID)
-                mylog(f"url = {tmpUrl.splitlines()[0]}")
-            except:
-                pass
-        #if tag == "#document":
         if tag in [
             "#document", # for Chrome
             "body", # For Firefox
@@ -180,7 +173,10 @@ def isMainNVDAThread():
 def getFocusedObjectFromMainThread():
     def retrieveObjectProperties():
         focus = api.getFocusObject()
-        url = getUrl(focus.treeInterceptor.rootNVDAObject)
+        if focus.treeInterceptor is not None:
+            url = getUrl(focus.treeInterceptor.rootNVDAObject)
+        else:
+            url = None
         mylog(f"GDMT {url=}")
         if True:
             mylog(f"retrieveObjectProperties: {focus.role == Role.EDITABLETEXT} {focus.simplePrevious is None} {focus.simpleNext is None} {focus.parent is not None} {focus.parent.role == Role.DOCUMENT}")
@@ -198,7 +194,10 @@ def getFocusedObjectFromMainThread():
     else:
         my_future = Future()
         def retrieveAndSetFuture():
-            my_future.set(retrieveObjectProperties())
+            try:
+                my_future.set(retrieveObjectProperties())
+            except Exception as e:
+                my_future.setException(e)
         wx.CallAfter(retrieveAndSetFuture)
         result = my_future.get()
     return result
@@ -209,8 +208,6 @@ def isGoogleDocsUrl(url):
     return url.startswith("https://docs.google.com/document/")
 
 def isGoogleDocs():
-    focus = api.getFocusObject()
-    api.uc = {k:v for k,v in urlCache.items()}
     try:
         mylog("isGD")
         focus = api.getFocusObject()
@@ -224,15 +221,6 @@ def isGoogleDocs():
         except AttributeError:
             mylog("Interceptor not found")
             return False
-        if False:
-            url = getUrlCached(interceptor, obj)
-            mylog(f"url = {url}")
-            if url is None:
-                mylog("url is none")
-                return False
-            if not url.startswith("https://docs.google.com/document/"):
-                mylog("Url doesn't match")
-                return False
         try:
             url = urlCache[interceptor]
         except KeyError:
@@ -254,7 +242,6 @@ def isGoogleDocs():
                 ui.message(f"{dt} ms")
             #core.callLater(1000, speakDelayed)
             urlCache[interceptor] = url
-            api.zz = url
             if role not in [Role.EDITABLETEXT]:
                 mylog(f"focus role doesn't match: found {role}")
                 return False
@@ -385,9 +372,6 @@ if True:
 
 def findOverrideScript(gesture):
     keystroke = gesture.identifiers[-1].split(':')[1]
-    if keystroke.lower().startswith('3'):
-        api.k = keystroke
-        api.m = KEYSTROKE_MAP
     try:
         return KEYSTROKE_MAP[keystroke]
     except KeyError:
@@ -445,11 +429,3 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
         else:
             msg = _("Disabled Google Docs accessibility layer")
         ui.message(msg)
-
-
-    #@script(description="Speaks URL", gestures=['kb:NVDA+Home'])
-    def script_speakUrl(self, gesture):
-        #mylog("asdfasdf")
-        obj = api.getFocusObject()
-        url = getUrlCached(obj.treeInterceptor, obj)
-        ui.message(str(url))
