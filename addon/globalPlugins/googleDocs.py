@@ -26,9 +26,9 @@ import winUser
 import wx
 
 
-debug = False
+debug = True
 if debug:
-    f = open("C:\\Users\\tmal\\drp\\1.txt", "w", encoding='utf-8')
+    f = open("C:\\Users\\tony\\1.txt", "w", encoding='utf-8')
 def mylog(s):
     if debug:
         print(str(s), file=f)
@@ -56,6 +56,28 @@ def executeAsynchronously(gen):
 
 
 def getUrl(obj):
+    url2 = getUrl2(obj)
+    url1 = getUrl1(obj)
+    mylog(f"gugu {url1=} {url2=}")
+    return url2 or url1
+    
+
+def getUrl1(obj):
+    for i in range(2):
+        mylog(f"GU{i}")
+        if obj.role == Role.DOCUMENT:
+            url = obj.IAccessibleObject.accValue(0)
+            mylog(f"{url=}")
+            return url
+        obj = obj.simpleParent
+        if obj is None:
+            mylog("GU obj None")
+            return None
+    mylog("GU not found document")
+    return None
+    
+
+def getUrl2(obj):
     mylog("getUrl start")
     if not isinstance(obj, IAccessible):
         mylog("Not IA2")
@@ -96,7 +118,7 @@ def getUrl(obj):
     return url
 
 urlCache = weakref.WeakKeyDictionary()
-def getUrlCached(interceptor, obj):
+def old_getUrlCached(interceptor, obj):
     #mylog("getUrlCached({interceptor}, {obj})")
     try:
         result = urlCache[interceptor]
@@ -106,6 +128,7 @@ def getUrlCached(interceptor, obj):
     except KeyError:
         #mylog("Cache miss")
         pass
+    obj = interceptor.rootNVDAObject
     url = getUrl(obj)
     #mylog(f"Resolved url = {url}")
     if url is not None and url.startswith("http"):
@@ -157,6 +180,8 @@ def isMainNVDAThread():
 def getFocusedObjectFromMainThread():
     def retrieveObjectProperties():
         focus = api.getFocusObject()
+        url = getUrl(focus.treeInterceptor.rootNVDAObject)
+        mylog(f"GDMT {url=}")
         if True:
             mylog(f"retrieveObjectProperties: {focus.role == Role.EDITABLETEXT} {focus.simplePrevious is None} {focus.simpleNext is None} {focus.parent is not None} {focus.parent.role == Role.DOCUMENT}")
         isGD = (
@@ -165,8 +190,9 @@ def getFocusedObjectFromMainThread():
             and focus.simpleNext is None
             and focus.parent is not None
             and focus.parent.role == Role.DOCUMENT
+            and isGoogleDocsUrl(url)
         )
-        return (focus, focus.role, focus.name, isGD)
+        return (focus, focus.role, focus.name, isGD, url)
     if isMainNVDAThread():
         result = retrieveObjectProperties()
     else:
@@ -176,7 +202,15 @@ def getFocusedObjectFromMainThread():
         wx.CallAfter(retrieveAndSetFuture)
         result = my_future.get()
     return result
+
+def isGoogleDocsUrl(url):
+    if url is None:
+        return None
+    return url.startswith("https://docs.google.com/document/")
+
 def isGoogleDocs():
+    focus = api.getFocusObject()
+    api.uc = {k:v for k,v in urlCache.items()}
     try:
         mylog("isGD")
         focus = api.getFocusObject()
@@ -184,28 +218,43 @@ def isGoogleDocs():
         # But we can extract treeInterceptor from it and that object makes more sense.
         # Below we will also retrieve focused object from main thread to perform additional checks.
         obj = focus.treeInterceptor.currentNVDAObject
-        api.o = obj
         mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
         try:
             interceptor = focus.treeInterceptor
         except AttributeError:
             mylog("Interceptor not found")
             return False
-
-        url = getUrlCached(interceptor, obj)
-        mylog(f"url = {url}")
-        if url is None:
-            mylog("url is none")
-            return False
-        if not url.startswith("https://docs.google.com/document/"):
-            mylog("Url doesn't match")
-            return False
+        if False:
+            url = getUrlCached(interceptor, obj)
+            mylog(f"url = {url}")
+            if url is None:
+                mylog("url is none")
+                return False
+            if not url.startswith("https://docs.google.com/document/"):
+                mylog("Url doesn't match")
+                return False
+        try:
+            url = urlCache[interceptor]
+        except KeyError:
+            url = None
+        if url is not None:
+            if not isGoogleDocsUrl(url):
+                return False
         if True:
             # For some reason I couldn't figure out if we query focused object in this thread
             # It returns Role.UNKNOWN.
             # So we need to compute role and name in the main thread.
             # Happy hacking!
-            focus, role, name, isGD = getFocusedObjectFromMainThread()
+            t0 = time.time()
+            focus, role, name, isGD, url = getFocusedObjectFromMainThread()
+            t1 = time.time()
+            dt = int(1000*(t1-t0))
+            def speakDelayed():
+                speech.cancelSpeech()
+                ui.message(f"{dt} ms")
+            #core.callLater(1000, speakDelayed)
+            urlCache[interceptor] = url
+            api.zz = url
             if role not in [Role.EDITABLETEXT]:
                 mylog(f"focus role doesn't match: found {role}")
                 return False
