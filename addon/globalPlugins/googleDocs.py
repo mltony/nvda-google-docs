@@ -24,7 +24,8 @@ import ui
 import weakref
 import winUser
 import wx
-
+from logHandler import log
+import gui
 
 debug = True
 if debug:
@@ -54,81 +55,50 @@ def executeAsynchronously(gen):
     l = lambda gen=gen: executeAsynchronously(gen)
     core.callLater(value, l)
 
-
-def getUrl(obj):
-    url2 = getUrl2(obj)
-    url1 = getUrl1(obj)
-    mylog(f"gugu {url1=} {url2=}")
-    return url2 or url1
-    
-
-def getUrl1(obj):
-    for i in range(2):
-        mylog(f"GU{i}")
-        if obj.role == Role.DOCUMENT:
-            url = obj.IAccessibleObject.accValue(0)
-            mylog(f"{url=}")
-            return url
-        obj = obj.simpleParent
-        if obj is None:
-            mylog("GU obj None")
-            return None
-    mylog("GU not found document")
-    return None
-    
-
-def getUrl2(obj):
-    mylog("getUrl start")
-    if not isinstance(obj, IAccessible):
-        mylog("Not IA2")
-        return None
-    url = None
-    o = obj
-    while o is not None:
-        mylog(f"while loop o:{o.role}")
-        try:
-            tag = o.IA2Attributes["tag"]
-            mylog(f"tag={tag}")
-        except AttributeError:
-            mylog("AttributeError")
-            break
-        except KeyError:
-            mylog("KeyError - try to continue")
-            o = o.simpleParent
-            continue
-        if tag in [
-            "#document", # for Chrome
-            "body", # For Firefox
-        ]:
-            mylog("Good tag!")
-            thisUrl = o.IAccessibleObject.accValue(o.IAccessibleChildID)
-            mylog(f"url={thisUrl}")
-            if thisUrl is not None and thisUrl.startswith("http"):
-                url = thisUrl
-        mylog("go to simpleParent")
-        o = o.simpleParent
-    mylog(f"Done; url={url}")
-    return url
-
-urlCache = weakref.WeakKeyDictionary()
-def old_getUrlCached(interceptor, obj):
-    #mylog("getUrlCached({interceptor}, {obj})")
-    try:
-        result = urlCache[interceptor]
-        #mylog(f"Cache hit! Cached result = {result}")
-        if result is not None:
-            return result
-    except KeyError:
-        #mylog("Cache miss")
+initSuccess = False
+isInGoogleDocsMainEditor = False
+def onPostFocusOrURLChange():
+    global isInGoogleDocsMainEditor
+    url = api.getCurrentURL()
+    if not isGoogleDocsUrl(url):
+        isInGoogleDocsMainEditor = False
+        return
+    focus = api.getFocusObject()
+    isInGoogleDocsMainEditor = (
+        focus.role == Role.EDITABLETEXT
+        and focus.simplePrevious is None
+        and focus.simpleNext is None
+        and focus.parent is not None
+        and focus.parent.role == Role.DOCUMENT
+    )
+    if isInGoogleDocsMainEditor:
+        #tones.beep(1000, 50)
         pass
-    obj = interceptor.rootNVDAObject
-    url = getUrl(obj)
-    #mylog(f"Resolved url = {url}")
-    if url is not None and url.startswith("http"):
-        #mylog(f"Storing in cache url = {url}")
-        urlCache[interceptor] = url
-    #mylog(f"Returning url={url}")
-    return url
+
+def onPostNvdaStartup():
+    try:
+        post = api.postFocusOrURLChange
+    except AttributeError:
+        wx.CallAfter(
+            gui.messageBox,
+            _(
+                "Error initializing Google Docs accessibility add-on.\n"
+                "Google Docs accessibility requires BrowserNav v2.6.2 or later add-on to be installed.\n"
+                "However it is either not installed, or failed to initialize.\n"
+                "Please install the latest BrowserNav add-on from add-on store and restart NVDA.\n",
+            ),
+            _("Google Docs accessibility add-on Error"),
+            wx.ICON_ERROR | wx.OK,
+        )
+        return
+    post.register(onPostFocusOrURLChange)
+    global initSuccess
+    initSuccess = True
+
+    
+
+core.postNvdaStartup.register(onPostNvdaStartup)
+
 
 class Future:
     def __init__(self):
@@ -167,92 +137,10 @@ class Future:
     def done(self):
         return self.__is_set
 
-
-def isMainNVDAThread():
-    return threading.get_ident() == core.mainThreadId
-def getFocusedObjectFromMainThread():
-    def retrieveObjectProperties():
-        focus = api.getFocusObject()
-        if focus.treeInterceptor is not None:
-            url = getUrl(focus.treeInterceptor.rootNVDAObject)
-        else:
-            url = None
-        mylog(f"GDMT {url=}")
-        if True:
-            mylog(f"retrieveObjectProperties: {focus.role == Role.EDITABLETEXT} {focus.simplePrevious is None} {focus.simpleNext is None} {focus.parent is not None} {focus.parent.role == Role.DOCUMENT}")
-        isGD = (
-            focus.role == Role.EDITABLETEXT
-            and focus.simplePrevious is None
-            and focus.simpleNext is None
-            and focus.parent is not None
-            and focus.parent.role == Role.DOCUMENT
-            and isGoogleDocsUrl(url)
-        )
-        return (focus, focus.role, focus.name, isGD, url)
-    if isMainNVDAThread():
-        result = retrieveObjectProperties()
-    else:
-        my_future = Future()
-        def retrieveAndSetFuture():
-            try:
-                my_future.set(retrieveObjectProperties())
-            except Exception as e:
-                my_future.setException(e)
-        wx.CallAfter(retrieveAndSetFuture)
-        result = my_future.get()
-    return result
-
 def isGoogleDocsUrl(url):
     if url is None:
         return None
     return url.startswith("https://docs.google.com/document/")
-
-def isGoogleDocs():
-    try:
-        mylog("isGD")
-        focus = api.getFocusObject()
-        # For some reason this call returns an object with Role.UNKNOWN
-        # But we can extract treeInterceptor from it and that object makes more sense.
-        # Below we will also retrieve focused object from main thread to perform additional checks.
-        obj = focus.treeInterceptor.currentNVDAObject
-        mylog(f"isgd role={obj.role}; parent={obj.simpleParent.role} name='{obj.name}'")
-        try:
-            interceptor = focus.treeInterceptor
-        except AttributeError:
-            mylog("Interceptor not found")
-            return False
-        try:
-            url = urlCache[interceptor]
-        except KeyError:
-            url = None
-        if url is not None:
-            if not isGoogleDocsUrl(url):
-                return False
-        if True:
-            # For some reason I couldn't figure out if we query focused object in this thread
-            # It returns Role.UNKNOWN.
-            # So we need to compute role and name in the main thread.
-            # Happy hacking!
-            t0 = time.time()
-            focus, role, name, isGD, url = getFocusedObjectFromMainThread()
-            t1 = time.time()
-            dt = int(1000*(t1-t0))
-            def speakDelayed():
-                speech.cancelSpeech()
-                ui.message(f"{dt} ms")
-            #core.callLater(1000, speakDelayed)
-            urlCache[interceptor] = url
-            if role not in [Role.EDITABLETEXT]:
-                mylog(f"focus role doesn't match: found {role}")
-                return False
-            if not isGD:
-                mylog(f"isGD == False")
-                return False
-        mylog("yay!")
-        return True
-    except:
-        return False
-
 
 def getVkLetter(keyName):
     en_us_input_Hkl = 1033 + (1033 << 16)
@@ -386,7 +274,7 @@ def myGetAlternativeScript(selfself,gesture,script):
     keystrokeCounter += 1
     result = originalGetAlternativeScript(selfself,gesture,script)
     if not selfself.passThrough:
-        if addonEnabled and isGoogleDocs():
+        if addonEnabled and isInGoogleDocsMainEditor:
             overrideScript = findOverrideScript(gesture)
             if overrideScript is not None:
                 return overrideScript
@@ -396,7 +284,7 @@ def myGetAlternativeScript(selfself,gesture,script):
 
 def myTableMovementScriptHelper(selfself, movement, axis):
     if isinstance(selfself, browseMode.BrowseModeDocumentTreeInterceptor):
-        if addonEnabled and isGoogleDocs():
+        if addonEnabled and isInGoogleDocsMainEditor:
             # Here instead of executing table navigation gesture on treeInterceptor, we execute the same gesture on focused object instead.
             selfself = api.getFocusObject()
     originalTableMovementScriptHelper(selfself, movement, axis)
@@ -422,6 +310,10 @@ class GlobalPlugin(globalPluginHandler.GlobalPlugin):
 
     @script(description="Toggle Google Docs accessibility mode.", gestures=['kb:NVDA+alt+g'])
     def script_toggleGoogleDocAccessibility (self, gesture):
+        if not initSuccess:
+            msg = _("Google Docs Accessibility add-on failed to initialize.")
+            ui.message(msg)
+            return
         global addonEnabled
         addonEnabled = not addonEnabled
         if addonEnabled:
