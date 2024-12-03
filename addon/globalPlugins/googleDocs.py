@@ -27,7 +27,7 @@ import wx
 from logHandler import log
 import gui
 
-debug = True
+debug = False
 if debug:
     f = open("C:\\Users\\tony\\1.txt", "w", encoding='utf-8')
 def mylog(s):
@@ -72,7 +72,6 @@ def onPostFocusOrURLChange():
         and focus.parent.role == Role.DOCUMENT
     )
     if isInGoogleDocsMainEditor:
-        #tones.beep(1000, 50)
         pass
 
 def onPostNvdaStartup():
@@ -94,8 +93,6 @@ def onPostNvdaStartup():
     post.register(onPostFocusOrURLChange)
     global initSuccess
     initSuccess = True
-
-    
 
 core.postNvdaStartup.register(onPostNvdaStartup)
 
