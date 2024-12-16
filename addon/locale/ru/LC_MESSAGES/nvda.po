@@ -1,24 +1,49 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Google Docs Accessibility 1.2\n"
-"POT-Creation-Date: 2024-01-18 19:10+0200\n"
-"PO-Revision-Date: 2024-05-21 12:04+0300\n"
+"Project-Id-Version: Google Docs Accessibility 1.4.1\n"
+"POT-Creation-Date: 2024-12-16 09:20+0700\n"
+"PO-Revision-Date: 2024-12-16 09:31+0700\n"
 "Last-Translator: Danil Kostenkov <danilkostenkov38@gmail.com>\n"
 "Language-Team: \n"
 "Language: ru\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.4.4\n"
+"X-Generator: Poedit 3.5\n"
 "X-Poedit-Basepath: ../../../..\n"
-"X-Poedit-SearchPath-0: addon/globalPlugins/googleDocs.py\n"
-"X-Poedit-SearchPath-1: buildVars.py\n"
+"X-Poedit-SearchPath-0: .\n"
+"X-Poedit-SearchPathExcluded-0: addon/globalPlugins/googleDocs.py\n"
 
-#: addon/globalPlugins/googleDocs.py:394
+#: addon/globalPlugins/googleDocs.py:84
+msgid ""
+"Error initializing Google Docs accessibility add-on.\n"
+"Google Docs accessibility requires BrowserNav v2.6.2 or later add-on to be "
+"installed.\n"
+"However it is either not installed, or failed to initialize.\n"
+"Please install the latest BrowserNav add-on from add-on store and restart "
+"NVDA.\n"
+msgstr ""
+"Ошибка при инициализации дополнения Доступность Google Документов.\n"
+"Для работы  дополнения Доступность Google Документов требуется дополнение "
+"BrowserNav 2.6.2 или более поздней версии.\n"
+"Однако оно либо не установлена, либо его не удалось инициализировать.\n"
+"Пожалуйста, установите последнюю версию дополнения BrowserNav из магазина "
+"дополнений и перезагрузите NVDA.\n"
+
+#: addon/globalPlugins/googleDocs.py:89
+msgid "Google Docs accessibility add-on Error"
+msgstr "Ошибка дополнения Доступность Google Документов"
+
+#: addon/globalPlugins/googleDocs.py:311
+msgid "Google Docs Accessibility add-on failed to initialize."
+msgstr ""
+"Не удалось инициализировать дополнение Доступность Google Документов."
+
+#: addon/globalPlugins/googleDocs.py:317
 msgid "Enabled Google Docs accessibility layer"
 msgstr "Слой доступности Google документов включён"
 
-#: addon/globalPlugins/googleDocs.py:396
+#: addon/globalPlugins/googleDocs.py:319
 msgid "Disabled Google Docs accessibility layer"
 msgstr "Слой доступности Google документов выключен"
 
