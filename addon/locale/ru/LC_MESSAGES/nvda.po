@@ -1,18 +1,21 @@
 msgid ""
 msgstr ""
-"Project-Id-Version: Google Docs Accessibility 1.4.1\n"
-"POT-Creation-Date: 2024-12-16 09:20+0700\n"
-"PO-Revision-Date: 2024-12-16 09:31+0700\n"
+"Project-Id-Version: Google Docs Accessibility 1.4.2\n"
+"POT-Creation-Date: 2025-07-09 13:53+0500\n"
+"PO-Revision-Date: 2025-07-09 13:58+0500\n"
 "Last-Translator: Danil Kostenkov <danilkostenkov38@gmail.com>\n"
-"Language-Team: \n"
-"Language: ru\n"
+"Language-Team: Russian translation team <nvda.ru>, Danil Kostenkov "
+"<danilkostenkov38@gmail.com>\n"
+"Language: ru_RU\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"X-Generator: Poedit 3.5\n"
+"X-Generator: Poedit 3.6\n"
 "X-Poedit-Basepath: ../../../..\n"
 "X-Poedit-SearchPath-0: .\n"
-"X-Poedit-SearchPathExcluded-0: addon/globalPlugins/googleDocs.py\n"
+"X-Poedit-SearchPath-1: addon\n"
+"X-Poedit-SearchPath-2: addon/globalPlugins\n"
+"X-Poedit-SearchPath-3: site_scons/site_tools/gettexttool\n"
 
 #: addon/globalPlugins/googleDocs.py:84
 msgid ""
@@ -36,8 +39,7 @@ msgstr "Ошибка дополнения Доступность Google Доку
 
 #: addon/globalPlugins/googleDocs.py:311
 msgid "Google Docs Accessibility add-on failed to initialize."
-msgstr ""
-"Не удалось инициализировать дополнение Доступность Google Документов."
+msgstr "Не удалось инициализировать дополнение Доступность Google Документов."
 
 #: addon/globalPlugins/googleDocs.py:317
 msgid "Enabled Google Docs accessibility layer"
@@ -49,7 +51,7 @@ msgstr "Слой доступности Google документов выключ
 
 #: buildVars.py:23
 msgid "Google Docs accessibility"
-msgstr "Доступность Google Документов"
+msgstr "Google Docs accessibility (Доступность Google Документов)"
 
 #: buildVars.py:26
 msgid "Accessibility enhancements for Google Docs."
